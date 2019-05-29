@@ -1,0 +1,2 @@
+model_checkpoint_path: "G:/jupyter/tmp/model.ckpt"
+all_model_checkpoint_paths: "G:/jupyter/tmp/model.ckpt"
