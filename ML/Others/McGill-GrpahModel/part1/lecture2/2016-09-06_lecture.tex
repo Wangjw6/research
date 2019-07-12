@@ -1,0 +1,376 @@
+\documentclass[12pt]{report}
+\usepackage{graphicx}
+\usepackage{scribe_MG}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage[mathscr]{eucal}
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}  %encodage du fichier
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{epstopdf}
+\usepackage{array}
+
+\usepackage{placeins}
+
+%% William
+\usepackage[colorlinks]{hyperref} % for links
+\usepackage{xcolor}             % for color
+\usepackage{caption}            % for caption* (without 'Figure 2.n:')
+\usepackage{float}              % for H, to place figure HERE!
+\usepackage{wrapfig}
+\usepackage{tikz}
+\usetikzlibrary{arrows}
+\usetikzlibrary{positioning}
+
+\usepackage{bbm}            % for the indicator function symbol : \mathbbm{1}
+\def\R{\mathbb{R}}
+\newcommand{\defobj}[1]{\color{red}#1\color{black}{}}
+\newcommand{\defmean}[1]{\color{green!70!black}#1\color{black}{}}
+\renewcommand{\emph}[1]{\color{violet}#1\color{black}{}}
+\DeclareMathOperator{\E}{\mathbb{E}}
+
+\newcommand{\sigmaField}{\mathcal{E}}
+
+%% For footnote horizontal spacing :
+%% \usepackage{footmisc}
+%% \setlength{\footnotemargin}{2mm}
+
+\newcommand\independent{\protect\mathpalette{\protect\independenT}{\perp}}
+\def\independenT#1#2{\mathrel{\rlap{$#1#2$}\mkern2mu{#1#2}}} 
+
+\newcommand{\indep}{\ensuremath{\,\bot\!\!\!\bot\,}} %% The symbol for independent
+\newcommand{\notindep}{\indep\!\!\!\!\!/\,\,\,}
+
+\newtheorem{remark}{Remark}[section]
+\newtheorem{example}{Example}[section]
+\newtheorem{property}{Property}[section]
+
+
+\begin{document}
+\coursetitle{IFT 6269: Probabilistic Graphical Models}
+\semester{Fall 2016}
+\lecturer{Simon Lacoste-Julien} \scribe{William Léchelle}
+\lecturenumber{2} \lecturedate{September 6}
+
+\maketitle
+
+\textbf{Disclaimer:} These notes have only been lightly proofread.
+
+\section{Probability review}
+
+\subsection{Motivation}
+
+\textbf{Question :} Why do we use probability in data science ?\\
+\noindent\textbf{Answer :} Probability theory is a principled framework to model \emph{uncertainty}.\\
+
+\noindent\textbf{Question :} Where does uncertainty come from ?\\
+\noindent\textbf{Answer :} There are several sources :
+\begin{enumerate}
+\item it can be intrinsic to certain phenomenon (e.g. quantum mechanics) ;
+\item reasoning about future events ;
+\item we can only get partial information about some complex phenomenon :
+  \begin{enumerate} \item e.g. throwing a dice, it is hard to fully observe the initial conditions ;
+    \item for an object recognition model, a mapping from pixels to objects can be incredibly complex.
+  \end{enumerate}
+\end{enumerate}
+
+\subsection{Notation}
+
+Note that probability theorists and the graphical models community both use a
+lot of notational shorthands. The meaning of notations often has to be inferred
+from the context. Therefore, let's recall a few standard notations.
+
+Random variables will be noted $X_1, X_2, X_3, \dots$, or sometimes $X, Y, Z$. Usually, they will be real-valued.
+
+$x_1, x_2, x_3, \dots$ (or $x, y, z$), will denote the \emph{realizations} of the former random variables (the values the $X$s can take).
+
+\newpage
+\subsubsection{Formally}
+
+\begin{wrapfigure}[6]{R}{0pt}
+  \begin{tikzpicture}[scale=0.5]
+    %% \draw[help lines] (0,0) grid (12,6);
+    %% \node [align=center, red] at (1, 1.5) {bla \\ bla} ;
+    %% \draw [blue, thick] (6,5) rectangle (10,10);
+    \draw (0,0) circle (2cm);
+    \node[above] at (0,2) {$\Omega$};
+    \node (o) at (0.1,.4) {};
+    \draw (o) circle[radius=2pt] node[above] {$\omega$};
+    \fill (o) circle[radius=2pt];
+    \node at (-1,-2.8) {\emph{\small ``world of possibilities''}};
+    
+    \draw [->] (3,1) -- (7,1) node[right]{$\R$};
+    \node (x) at (4.1,1) {};
+    \draw (x) circle[radius=2pt] node[below] {$X(\omega)$};
+    \fill (x) circle[radius=3pt];
+    \draw [->, green!70!black] (o) to [bend left=30] node[midway, above, red] {$X$} (x);
+
+    \draw [->] (3,-1) -- (7,-1) node[right]{$\R$};
+    \node (y) at (6.2,-1) {};
+    \draw (y) circle[radius=2pt] node[above] {$Y(\omega)$};
+    \fill (y) circle[radius=3pt];
+    \draw [->, thin] (o) to [bend right=40] (y);
+    \node at (6,-2.5) {\emph{\small ``measurements''}};
+  \end{tikzpicture}
+\end{wrapfigure}
+
+%% Do we need to explain the `cartoon' ?
+
+Let us define $\Omega$, a sample space of \emph{elementary events}, $\{\omega_1, \omega_2, \omega_3, \dots\}$\footnote{temporarily assumed to be a countable set}.
+
+Then a \defobj{random variable} is a \defmean{(measurable\footnote{\href{https://en.wikipedia.org/wiki/Measurable_function}{Wikipedia}}) mapping $X: \Omega\mapsto\R$}.
+
+Then, a \defobj{probability distribution} $P$ is a \defmean{mapping $P: \sigmaField\mapsto[0,1]$}, 
+where $\sigmaField$ is the set of all subsets of $\Omega$, i.e. the set of \emph{events} (i.e. $2^{\Omega}$,
+i.e. a $\sigma$-field\footnote{the \href{https://en.wikipedia.org/wiki/Sigma-algebra}{$\sigma$-field formalism} is \href{http://math.stackexchange.com/a/683941/44171}{necessary} when $\Omega$ is uncountable, which happens as soon as we consider a continuous random variable.}) ;
+such that
+\defmean{
+  \begin{displaymath}
+    \left.
+  \begin{array}{ll}
+  %% \item
+    - P(E) \ge 0 \quad \forall E \in \sigmaField\\
+  %% \item
+    - P(\Omega) = 1\\
+    %% \item
+    - P(\displaystyle\bigcup_{i=1}^{\infty} E_{i}) = \sum_{i=1}^{\infty}(E_{i}) \quad \text{when $E_1, E_2, \dots$ are disjoint.}
+    \end{array}
+  \right\} \emph{\text{Kolmogorov axioms}}
+  \end{displaymath}
+  %  \footnote{These conditions - that a meaningful probability distribution must follow - are called the }
+}
+
+Therefore, a probability distribution on $\Omega$ induces a probability
+distribution on the image of~$X$\footnote{The image of~$X$ is the set of the
+  possible outputs of $X$ : $X(\Omega) = \{x : \exists \omega\in\Omega\ s.t.\ 
+  X(\omega) = x\}$} : $\Omega_{X} \triangleq X(\Omega)$. An event
+$\{x\}$ for $x \in \Omega_X$ thus gets the probability
+\begin{equation*}
+\begin{array}{r l l}
+  P_X(\{x\}) & = & P(\{\omega : X(\omega) = x\})\\
+  & = & P(X^{-1}(\{x\}))\\
+  & = & P\{X=x\} \quad \text{(shorthand)}\\
+  & = & p(x) \quad \text{actually used shorthand, even more ambiguous}
+\end{array}
+\end{equation*}
+
+where $X^{-1}(A) \triangleq \{\omega : X(\omega)\in A\}$.
+
+\subsubsection{Example}
+In the case of a dice roll, $\Omega = \{1, 2, \dots, 6\}$. Let's consider two
+random variables :\\
+$X$ measures whether the dice result is even.\\
+$Y$ measures whether the dice result is odd.
+
+Formally, $X = \mathbbm{1}_{\{2,4,6\}}$, and $Y = \mathbbm{1}_{\{1,3,5\}}$ where 
+\defmean{\[ \mathbbm{1}_A(\omega) \triangleq 
+\left\{
+\begin{array}{ll}
+  1 & \text{if}\ \omega \in A \\
+  0 & \text{otherwise} % \footnote{otherwise} % doesn't display ?
+\end{array}
+\right.
+\]} is the \defobj{indicator function} on $A$.
+
+\begin{figure}[H]\centering
+  \begin{tikzpicture}[scale=.8]
+    %% \draw[help lines] (0,0) grid (12,6);
+    %% \node [align=center, red] at (1, 1.5) {bla \\ bla} ;
+    %% \draw [blue, thick] (6,5) rectangle (10,10);
+    \draw (0,0) circle (2cm);
+    \node[above] at (0,2) {$\Omega$};
+    \foreach \x/\y/\n in {1.1/.4/1, -1.3/.6/3, -1.3/-1.2/2, -.2/-.6/4, .3/1.1/5, .6/-1.6/6}{
+      \draw[shift={(\x,\y)}] circle[radius=2pt] node[above] {$\n$};
+      \fill[shift={(\x,\y)}] circle[radius=2pt];}
+    \draw [->] (9.8,-2) -- (15,-2) node[right]{$\Omega_X$};
+    \draw [->] (10,-2.2) -- (10,2) node[above]{$\Omega_Y$};
+    \draw[violet, thick] (0,.7) ellipse (1.5cm and .7cm) node[below right = .2cm and .8cm] {$\{X=0, Y=1\}$};
+
+    \node[above left] at (10,-2)  {$0$};
+    \node (x) at (10,1) {};
+    \node at (x) [left] {$1$};
+    \draw (x)[red] circle[radius=2pt] node[right] {$\left(X(5),Y(5)\right)$}; % \scriptstyle
+    \fill (x)[red] circle[radius=3pt];
+    \node (y) at (13,-2) {};
+    \draw (y)[red] circle[radius=2pt] node[below, black] {$1$};
+    \fill (y)[red] circle[radius=3pt];
+    \draw [->,thick,violet] (.3,1.1) to [bend left=40] node[midway, above, violet] {$(X,Y)$} (x); % \tiny{}
+  \end{tikzpicture}
+\end{figure}
+
+We can now define the \defobj{joint distribution} on $(X,Y)\in\Omega_X \times \Omega_Y$.
+
+%% \defmean ?
+\[P_{X,Y}(\{X=x,\!\footnote{This comma means \emph{and}, the intersection of both events.}\,\, Y=y\}) = P\left(X^{-1}(\{x\}) \cap Y^{-1}(\{y\})\right)\]
+
+$(X,Y)$ can be called a \emph{random vector}, or a \emph{vector-valued random
+  variable}, with ``random variable'' meant in a generalized sense.
+
+We can represent the joint distribution as a table, such as in our running example :
+\begin{center} % \centering
+\begin{tabular}{l|ll}
+  & $X=0$ & $X=1$ \\ \hline
+  $Y=0$ & 0   & $\frac{1}{2}$ \\
+  $Y=1$ & $\frac{1}{2}$ & 0  
+\end{tabular}
+\end{center}
+
+For instance : $\displaystyle P(\{X=1, Y=0\}) = P(\{2,4,6\}) = \sum_{\omega \in \{2,4,6\}}p(\omega) = \frac{1}{6} + \frac{1}{6} + \frac{1}{6} = \frac{1}{2}$.
+
+Let's also define, in the context of a joint distribution, the \defobj{marginal distribution}, i.e. the distribution on components of the random vector :
+\defmean{\[
+  \tag{\emph{sum rule}}
+  P\{X=x\} = \sum_{y\in\Omega_Y}P\{X=x, Y=y\}
+\]}
+
+This rule is a property, deriving it from the axioms is left as an exercice for the reader.
+
+\subsection{Types of random variables}
+
+\subsubsection{Discrete random variables}
+For a \defobj{discrete random variable}, \defmean{$\Omega_X$ is countable}. Its
+probability distribution on $\Omega_X$, $P_X$, is fully defined by its
+\defobj{probability mass function} (aka \emph{pmf}), \defmean{$P_X(\{X=x\})$,
+  for $x \in \Omega_X$}. This notation is shortened as $P_X(x)$, and even as
+$p(x)$, ``typing'' $x$ as only denoting values of the $X$ variable. Thereby, it
+is possible that $p(x) \neq p(y)$ even if $x=y$, in the sense that $p(x)$ means
+$P_X(x)$ and $p(y)$ means $P_Y(y)$.
+
+More generally, for $\Omega_X \in \R$, the probability distribution $P_X$ is fully characterized by its \defobj{cumulative distribution function} (aka \emph{cdf}) : \defmean{$F_X(x) \triangleq P_X\{X \leq x\}$}.
+
+\begin{wrapfigure}[6]{R}{0pt}
+  \begin{tikzpicture}
+    \draw[->] (-3,0) -- (3,0);
+    \draw[->] (0,-0.8) -- (0,1.6);
+    \draw[<-o,domain=-3:-1,smooth,thin,variable=\x,blue] plot ({\x},{0});
+    \draw[*-o,domain=-1:0 ,smooth,thin,variable=\x,blue] plot ({\x},{.6});
+    \draw[*->,domain=0:2.6,smooth,thin,variable=\x,blue] plot ({\x},{1}) node[above] {$F_X(x)$};;
+    \draw[shift={(0,1)}] (0pt,0pt) -- (-1pt,0pt) node[left] {$1$};
+    %% \node[below right] at (0,0)  {$0$};
+    \foreach \x/\xtext in {-1/-1, 1/1}
+    \draw[shift={(\x,0)}] (0pt,2pt) -- (0pt,-2pt) node[below] {$\xtext$};
+  \end{tikzpicture}
+  \caption*{\small{Example of a cumulative distribution function.}}
+\end{wrapfigure}
+
+\noindent It has the following properties :
+
+\begin{enumerate}
+\item $F_X$ is non-decreasing ;
+\item $\displaystyle\lim_{x \rightarrow -\infty} F_X(x) = 0$ ;
+\item $\displaystyle\lim_{x \rightarrow +\infty} F_X(x) = 1$.
+\end{enumerate}
+For discrete random variables, the cumulative distribution function is piecewise constant, and has jumps.
+
+\subsubsection{Continuous random variables}
+
+For a \defobj{continuous random variable}, \defmean{the cumulative distribution
+  function  is ``absolutely continuous''}, i.e. \defmean{is differentiable almost everywhere,
+and $\exists f(x)$ s.t. $F_X(x) = \int_{-\infty}^{x} f(u) du$}. % \mathop{du} ?
+Said $f$ is called the \defobj{probability density function} of the random variable (aka \emph{pdf}). Where $f$ is continuous, $\frac{d}{dx}F_X(x) = f(x)$.
+
+The probability density function is the continuous analog of the probability
+mass function of a discrete random variable (with sums becoming integrals). Hence :
+
+\begin{center}
+\begin{tabular}{cc}
+discrete & continuous \\\hline
+$\displaystyle\sum_{x\in\Omega_X} p(x) = 1$ & $\displaystyle\int_{\Omega_X} p(x) = 1$\\
+$p =$ prob. \emph{mass} function & $p =$ prob. \emph{density} function
+\end{tabular}
+\end{center}
+
+Note in the continuous case, as a density function, $p(x)$ can be greater than 1, on a sufficiently narrow interval. For instance, the uniform distribution on $[0,\frac{1}{2}]$ :
+\[p(x) = \left\{\begin{array}{ll}
+2 & \text{for } x \in [0,\frac{1}{2}]\\
+0 & \text{otherwise}
+\end{array}\right.\]
+
+\subsection{Other random variable basics}
+
+\subsubsection{Expectation/mean}
+The \defobj{expectation} of a random variable is 
+\[\defobj{\E[X]} \triangleq \defmean{\sum_{x\in\Omega_X}x\ p(x)} \quad \text{or} \quad \defmean{\int\displaylimits_{\Omega_X}x\ p(x) \mathop{dx}} \enspace \text{(in the continuous case)}\]
+
+\subsubsection{Variance}
+
+\[\begin{array}{lll}
+\defobj{Var[X]} & \triangleq & \defmean{\E[(X-\E(X))^2]}\\
+& = & \E[X^2] - \E[X]^2
+\end{array}\]
+
+Variance is a measure of the dispersion of values around the mean.
+
+\subsubsection{Independance}
+
+\defobj{$X$ is independant from $Y$}, noted \defobj{$X \independent Y$}, iff \defmean{$p(x,y) = p(x)p(y) \enspace \forall x, y\in \Omega_X\times \Omega_Y$}.
+% \begin{smallmatrix}\forall x\in \Omega_X\\ \forall y \in \Omega_Y\end{smallmatrix}
+
+\noindent Random variables $X_1,\ldots X_n$ are \emph{mutually independant} iff $p(x_1,\ldots x_n) = \prod_{i=1}^n p(x_i)$.
+
+\subsubsection{Conditioning}
+
+For events $A$ and $B$, suppose that $p(B) \neq 0$. We define the
+\defobj{probability of $A$ given $B$}, \defmean{\[P(A|B) \triangleq \frac{P(A
+    \cap B) }{P(B)}\]}
+
+In terms of sample space, that means we look at the subspace where $B$ happens,
+and in that space, we look at the subspace where $A$ also happens.
+
+For random variables $X$ and $Y$, thus :
+\[P(X=x| Y=y) \triangleq \frac{P(X=x, Y=y)}{P(Y=y)}\]
+$P(Y=y) = \sum_{x}P(X=x,Y=y)$ is a \emph{normalization constant}, necessary in order to get a real probability distribution.
+
+By definition, we get the product rule :
+\[\tag{\emph{product rule}}
+p(x,y) = p(x|y)p(y)\]
+
+It is always true, with the subtle point that $p(x|y)$ is undefined if $p(y) = 0$.\footnote{In probability theory, we usually do not care what happens on sets with probability zero; so we are free to define $p(x|y)$ to be any value we want when $p(y)=0$.}
+
+\subsubsection{Bayes rule}
+
+Bayes rule is about inverting the conditioning of the variables.
+
+\[\tag{\emph{Bayes rule}}
+\emph{p(x|y) = \frac{p(y|x)p(x)}{p(y)}} = \frac{p(y|x)p(x)}{\sum_{x'}p(x',y)}
+\]
+
+\subsubsection{Chain rule}
+
+By successive application of the product rule, it is always true that :
+\[\tag{\emph{Chain rule}}
+\begin{array}{r l l}
+  p(x_1, \ldots, x_n) &=&p(x_{1:n-1})p(x_n|x_{1:n-1})\\
+  &=& \cdots\\
+  &=& \prod_{i=1}^{n} p(x_i|x_1,\ldots,x_{i-1})
+\end{array}
+\]
+
+The last part can be simplified using the conditional independance
+asumptions we make, like in the case of directed graphical models.
+
+\subsubsection{Conditional independance}
+
+\defobj{$X$ is conditionally independant of $Y$ given $Z$}, noted \defobj{$X \indep Y | Z$}, iff
+\[\defmean{p(x,y|z) = p(x|z)p(y|z) \quad \medmuskip=0mu \forall x,y,z \in \Omega_x \times \Omega_y \times \Omega_z\ s.t.\ p(z) \neq 0}\]
+
+For instance, with $Z$ the probability that a mother carries a genetic disease
+on chromosome X, $X$ the probability for her first child to carry the disease,
+and $Y$ the same probability for her second child, we can say that $X$ is
+independant of $Y$ given $Z$ (because only the status of the mother impacts
+directly each child : once that is known, children's probabilities of carrying the
+disease are independant from each other).
+\newline\\
+As an exercise to the reader, prove that $p(x|y,z) = p(x|z)$ when $X\indep Y |Z$.
+
+$\because X\indep Y |Z$
+
+$\therefore (x,y|z)=p(x|z)p(y|z)$
+
+Based on Bayes theorem
+
+$p(x|y,z)=\frac{p(x,y,z)}{p(y,z)}=\frac{p(x,y|z)p(z)}{p(y|z)p(z)}=\frac{p(x|z)p(y|z)p(z)}{p(y|z)p(z)}$
+
+$\therefore p(x|y,z)=\frac{p(x|z)p(y|z)p(z)}{p(y|z)p(z)}=p(x|z)$
+\end{document}
